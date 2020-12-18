@@ -14,6 +14,22 @@ profile_files=(
   usr/share/pulseaudio/alsa-mixer/paths/sennheiser-gsx-1000-output-main.conf
 )
 
+need_alias() {
+  if [[ "${1}" != *"usr/share/pulseaudio"* ]]; then
+    return 1
+  fi
+
+  if [ -d /usr/share/alsa-card-profile/mixer/profile-sets ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+alias_path() {
+  echo "$1" | sed "s/pulseaudio\/alsa-mixer/alsa-card-profile\/mixer/"
+}
+
 install() {
   echo "Installing GSX 1000 / 1200 Pro"
   echo -n "Installing files... "
@@ -22,6 +38,9 @@ install() {
     f_orig=$(readlink -f "src/${file}")
     f_dest="/${file}"
     sudo cp "${f_orig}" "${f_dest}"
+    if need_alias "${f_orig}"; then
+        sudo ln -sf "${f_dest}" "$(alias_path "${f_dest}")"
+    fi
   done
 
   echo "OK"
@@ -32,7 +51,10 @@ uninstall() {
   echo -n "removing files... "
   for file in "${profile_files[@]}"; do
     f_dest="/${file}"
-    sudo rm "${f_dest}"
+    sudo rm -f "${f_dest}"
+    if need_alias "${file}"; then
+      sudo rm -f "$(alias_path "${f_dest}")"
+    fi
   done
   echo "OK"
 }
